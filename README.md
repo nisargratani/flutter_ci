@@ -15,11 +15,8 @@ A powerful Flutter CLI tool designed for CI/CD automation. It simplifies the bui
 Activate the tool globally from your terminal:
 
 ```bash
-# To install from pub.dev (once published)
+# To install from pub.dev 
 dart pub global activate flutter_ci
-
-# To install from local source
-dart pub global activate --source path .
 ```
 
 ## Quick Start

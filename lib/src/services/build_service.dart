@@ -7,19 +7,37 @@ class BuildService {
   /// The shell instance used for executing commands.
   final shell = Shell(verbose: true);
 
-  /// Builds the Android APK.
-  Future<void> buildAndroid() async {
-    await shell.run('flutter build apk');
+  /// Builds the Android artifact (APK or AAB).
+  Future<void> buildAndroid({String format = 'apk'}) async {
+    if (format == 'aab') {
+      await shell.run('flutter build appbundle');
+    } else {
+      await shell.run('flutter build apk');
+    }
   }
 
-  /// Builds the iOS IPA.
-  Future<void> buildIOS() async {
-    await shell.run('flutter build ipa');
+  /// Builds the iOS IPA with the specified export method.
+  Future<void> buildIOS({String method = 'ad-hoc'}) async {
+    // Ensuring we use the correct format for Flutter's export-method flag
+    // The methods mapping is:
+    // app-store, ad-hoc, development, enterprise
+    await shell.run('flutter build ipa --export-method=$method');
   }
 
   /// Cleans the Flutter project.
   Future<void> clean() async {
     await shell.run('flutter clean');
+  }
+
+  /// Deletes the builds folder specifically.
+  Future<void> cleanBuilds() async {
+    final buildDir = Directory('build');
+    if (await buildDir.exists()) {
+      await buildDir.delete(recursive: true);
+      print("Builds folder deleted successfully.");
+    } else {
+      print("No builds folder found.");
+    }
   }
 
   /// Runs `flutter pub get`.

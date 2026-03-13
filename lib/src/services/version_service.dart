@@ -57,4 +57,19 @@ class VersionService {
 
     Logger.success("Version set to → $newVersion");
   }
+  /// Retrieves the current version string from `pubspec.yaml`.
+  String getVersion() {
+    final file = File('pubspec.yaml');
+    if (!file.existsSync()) throw Exception("pubspec.yaml not found");
+    final yaml = loadYaml(file.readAsStringSync());
+    return yaml['version'];
+  }
+
+  /// Retrieves the application name from `pubspec.yaml`.
+  String getAppName() {
+    final file = File('pubspec.yaml');
+    if (!file.existsSync()) throw Exception("pubspec.yaml not found");
+    final yaml = loadYaml(file.readAsStringSync());
+    return yaml['name'];
+  }
 }

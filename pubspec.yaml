@@ -4,9 +4,15 @@ version: 0.0.1
 homepage: https://github.com/nisargratani/flutter_ci
 repository: https://github.com/nisargratani/flutter_ci
 issue_tracker: https://github.com/nisargratani/flutter_ci/issues
+topics:
+  - cli
+  - flutter
+  - ci
+  - cd
+  - automation
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=2.17.0 <4.0.0"
 
 dependencies:
   args: ^2.5.0

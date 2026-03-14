@@ -8,20 +8,38 @@ class BuildService {
   final shell = Shell(verbose: true);
 
   /// Builds the Android artifact (APK or AAB).
-  Future<void> buildAndroid({String format = 'apk'}) async {
+  Future<void> buildAndroid({
+    String format = 'apk',
+    String? buildName,
+    int? buildNumber,
+    String? extraFlags,
+  }) async {
+    final nameArg = buildName != null ? " --build-name=$buildName" : "";
+    final numberArg = buildNumber != null ? " --build-number=$buildNumber" : "";
+    final flags = extraFlags != null && extraFlags.isNotEmpty ? " $extraFlags" : "";
+
     if (format == 'aab') {
-      await shell.run('flutter build appbundle');
+      await shell.run('flutter build appbundle$flags$nameArg$numberArg');
     } else {
-      await shell.run('flutter build apk');
+      await shell.run('flutter build apk$flags$nameArg$numberArg');
     }
   }
 
   /// Builds the iOS IPA with the specified export method.
-  Future<void> buildIOS({String method = 'ad-hoc'}) async {
+  Future<void> buildIOS({
+    String method = 'ad-hoc',
+    String? buildName,
+    int? buildNumber,
+    String? extraFlags,
+  }) async {
+    final nameArg = buildName != null ? " --build-name=$buildName" : "";
+    final numberArg = buildNumber != null ? " --build-number=$buildNumber" : "";
+    final flags = extraFlags != null && extraFlags.isNotEmpty ? " $extraFlags" : "";
+
     // Ensuring we use the correct format for Flutter's export-method flag
     // The methods mapping is:
     // app-store, ad-hoc, development, enterprise
-    await shell.run('flutter build ipa --export-method=$method');
+    await shell.run('flutter build ipa --export-method=$method$flags$nameArg$numberArg');
   }
 
   /// Cleans the Flutter project.
@@ -31,7 +49,7 @@ class BuildService {
 
   /// Deletes the builds folder specifically.
   Future<void> cleanBuilds() async {
-    final buildDir = Directory('build');
+    final buildDir = Directory('builds');
     if (await buildDir.exists()) {
       await buildDir.delete(recursive: true);
       print("Builds folder deleted successfully.");

@@ -1,24 +1,22 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import '../utils/logger.dart';
+import 'package:flutter_ci/src/utils/logger.dart';
 
 /// A service that handles the collection and storage of build artifacts.
 class StorageService {
   /// Scans build directories and copies generated artifacts (.apk, .ipa, .aab)
-  /// to a timestamped folder in the `builds/` directory, renaming them to
+  /// to a versioned folder in the `builds/` directory, renaming them to
   /// `appname-version` format.
   Future<void> storeArtifacts({
     required String appName,
     required String version,
+    String? gitCommit,
   }) async {
-    final now = DateTime.now();
-
-    // Formatting: DDMMYY
-    final timestamp =
-        "${now.day.toString().padLeft(2, '0')}${now.month.toString().padLeft(2, '0')}${now.year.toString().substring(2)}";
-
     Logger.info("Starting artifact storage...");
-    final folderName = "builds/$timestamp";
+    
+    // Naming pattern: builds/v1.2.0+45/
+    final folderName = "builds/v$version";
     final destDir = Directory(folderName);
 
     if (!destDir.existsSync()) {
@@ -79,6 +77,22 @@ class StorageService {
       }
     }
 
+    // 3. Generate build_info.json
+    try {
+      final buildInfo = {
+        "version": version,
+        "build_time": DateTime.now().toIso8601String(),
+        "git_commit": gitCommit ?? "unknown",
+        "flutter_version": await _getFlutterVersion(),
+      };
+      
+      final infoFile = File(path.join(destDir.path, "build_info.json"));
+      infoFile.writeAsStringSync(jsonEncode(buildInfo));
+      Logger.success("Generated build_info.json");
+    } catch (e) {
+      Logger.error("Failed to generate build_info.json: $e");
+    }
+
     if (count == 0) {
       Logger.error("No artifacts found in build directories.");
       Logger.info(
@@ -86,5 +100,16 @@ class StorageService {
     } else {
       Logger.success("Artifacts stored in $folderName ($count files)");
     }
+  }
+
+  Future<String> _getFlutterVersion() async {
+    try {
+      final result = await Process.run('flutter', ['--version']);
+      if (result.exitCode == 0) {
+        final firstLines = result.stdout.toString().split('\n');
+        return firstLines.isNotEmpty ? firstLines.first.trim() : "unknown";
+      }
+    } catch (_) {}
+    return "unknown";
   }
 }

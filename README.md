@@ -1,92 +1,152 @@
 # flutter_ci
 
-A powerful Flutter CLI tool designed for CI/CD automation. It simplifies the build process by handling version bumps, generating builds (APK/IPA), and organizing artifacts into structured, timestamped directories.
+A powerful Flutter CLI tool designed for CI/CD automation. It simplifies the build process by handling version bumps, generating parallel builds (APK/IPA), and organizing artifacts into versioned directories with full git integration.
 
 ## Features
 
 - 🚀 **Automatic Version Bump**: Increment your build number in `pubspec.yaml` with zero effort.
-- 📦 **Multi-platform Build**: Supports generating release-ready Android APKs and iOS IPAs.
-- 📁 **Structured Artifact Storage**: Automatically collects build outputs into organized, timestamped folders.
-- 🛠️ **Fully Configurable**: Easily override versions, skip bumps, or define custom build and pre-build shell commands.
-- 💻 **Programmatic API**: Use the provided services and commands directly in your own Dart scripts.
+- ⚙️ **Config File Support**: Use `flutter_ci.yaml` to define project-wide settings and build pipelines.
+- 🏗️ **Parallel Build Generation**: Build Android and iOS concurrently for faster CI cycles.
+- 📁 **Versioned Artifact Storage**: Automatically collects build outputs into `builds/v[version]/` folders.
+- 📄 **Build Metadata**: Generates `build_info.json` with version, time, git commit, and environment details.
+- 🔗 **Git Integration**: Automated commits and tagging for release builds.
+- 📦 **Distribution Framework**: Infrastructure for uploading to Firebase App Distribution and Google Drive.
+- 📝 **Release Notes**: Automatically generate release notes from your recent git commits.
 
 ## Installation
 
 Activate the tool globally from your terminal:
 
 ```bash
-# To install from pub.dev 
 dart pub global activate flutter_ci
 ```
 
 ## Quick Start
 
 ```bash
-# Activate the tool
-dart pub global activate flutter_ci
+# 1. Create a config file (optional but recommended)
+# flutter_ci.yaml
 
-# Run a default build (bumps version, builds apk/ipa, stores artifacts)
+# 2. Run a build (uses config or defaults)
 flutter_ci build
+
+# 3. Perform a full release
+flutter_ci release --notes --upload
+```
+
+## Configuration (`flutter_ci.yaml`)
+
+You can define your build process in a `flutter_ci.yaml` file at the root of your project:
+
+```yaml
+version_bump: true
+manual_version: null # e.g. "2.0.0+1" Override version directly
+platform: both # android, ios, or both
+
+android:
+  format: apk
+  build_command: flutter build apk --release
+
+ios:
+  method: ad-hoc
+  build_command: flutter build ipa --no-codesign
+
+git:
+  commit: false # Auto-commit pubspec.yaml on release
+  tag: false    # Auto-tag on release
+  changelog: false # Auto-append release notes to CHANGELOG.md
+
+test:
+  coverage: false # Run `flutter test --coverage` before building
+
+# Pass custom --dart-define environment variables
+env:
+  # API_KEY: "secret123"
+  # ENVIRONMENT: "prod"
+
+pre_build:
+  - flutter clean
+  - flutter pub get
+
+distribution:
+  enabled: true
+  firebase:
+    enabled: true
+    app_id: "your-app-id"
+    testers: "beta-testers"
+  google_drive:
+    enabled: false
+    folder_id: "your-folder-id"
+  app_store:
+    enabled: false
+    username: "your-apple-id"
+    password: "app-specific-password"
+  play_store:
+    enabled: false
+    package_name: "com.example.app"
+    json_key_path: "path/to/play-store-key.json"
+
+notifications:
+  # Webhook URLs for post-release alerts
+  # slack: "https://hooks.slack.com/services/..."
+  # discord: "https://discord.com/api/webhooks/..."
 ```
 
 ## Usage
 
 ### CLI Commands
 
-#### Build Command
-
-The `build` command handles the complete lifecycle: cleaning, fetching dependencies, bumping the version, running the build, and storing artifacts.
+#### `build`
+Handles the build lifecycle: versioning, pre-build steps, and parallel artifact generation.
 
 ```bash
-flutter_ci build
+flutter_ci build [options]
 ```
+- `--version, -v`: Override version.
+- `--no-bump`: Skip version increment.
+- `--platform, -p`: Target platform (android, ios, both).
+- `--parallel`: Run Android/iOS builds concurrently (default: true).
+- `--coverage`: Run tests with coverage generation before building.
+- `--define, -d`: Pass custom dart-defines (e.g. `-d API_KEY=123`).
 
-**Customizing the Build:**
+#### `release`
+The ultimate command for production readiness.
+- Bumps version.
+- Commits `pubspec.yaml` change.
+- Tags the git repository.
+- Generates release notes from git logs.
+- Appends to `CHANGELOG.md`.
+- Builds artifacts with testing/coverage rules.
+- Uploads to distributed platforms (Firebase, Drive, Play Store, App Store).
+- Fires webhooks to Slack/Discord.
 
-| Option | Description | Example |
-|---|---|---|
-| `--version`, `-v` | Manually set the version | `flutter_ci build -v 1.2.0+10` |
-| `--no-bump` | Skip the automatic build number increment | `flutter_ci build --no-bump` |
-| `--android-build-cmd`| Custom shell command for Android build | `flutter_ci build --android-build-cmd "flutter build apk --flavor dev"` |
-| `--ios-build-cmd`    | Custom shell command for iOS build     | `flutter_ci build --ios-build-cmd "flutter build ipa --no-codesign"` |
-| `--pre-build` | Define custom commands to run before building | `flutter_ci build --pre-build "flutter test"` |
-| `--platform`, `-p` | Target platform for the build | `flutter_ci build -p android` (default: `both`) |
-| `--android-format` | Android build format | `flutter_ci build --android-format aab` (default: `apk`) |
-| `--ios-method` | iOS export method | `flutter_ci build --ios-method app-store` (default: `ad-hoc`) |
+```bash
+flutter_ci release [options]
+```
+- `--notes`: Generate notes from git commits.
+- `--changelog`: Append generation to CHANGELOG.md.
+- `--upload`: Trigger distribution uploads (Drive, Firebase).
+- `--app-store`: Trigger upload to Apple App Store Connect.
+- `--play-store`: Trigger upload to Google Play Console.
+- `--commit`: Auto-commit pubspec bump.
+- `--tag`: Auto-tag git repository.
 
-#### Bump Command
-
+#### `bump`
 Increment only the build number in your `pubspec.yaml`.
 
-```bash
-flutter_ci bump
-```
-
-#### Clean Builds Command
-
+#### `clean-builds`
 Delete the `build/` directory to start fresh.
 
-```bash
-flutter_ci clean-builds
+## Artifacts Structure
+
+Outputs are organized logically:
+```text
+builds/
+  v1.0.0+5/
+    app-release.apk
+    app-release.ipa
+    build_info.json  <-- Metadata (commit, time, etc.)
 ```
-
-## Example
-
-For a complete example of how to use `flutter_ci` programmatically, check the [example/usage.dart](example/usage.dart) file.
-
-```dart
-import 'package:flutter_ci/flutter_ci.dart';
-
-void main() async {
-  final buildCommand = BuildCommand();
-  await buildCommand.run(shouldBump: true);
-}
-```
-
-## Artifacts Location
-
-All generated artifacts are stored in:
-`builds/YYYY-MM-DD_HHMM/`
 
 ## Contributing
 

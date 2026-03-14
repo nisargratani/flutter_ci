@@ -2,6 +2,9 @@ import 'package:args/args.dart';
 import 'package:flutter_ci/src/commands/build_command.dart';
 import 'package:flutter_ci/src/commands/bump_command.dart';
 import 'package:flutter_ci/src/commands/release_command.dart';
+import 'package:flutter_ci/src/commands/doctor_command.dart';
+import 'package:flutter_ci/src/commands/init_command.dart';
+import 'package:flutter_ci/src/commands/list_command.dart';
 import 'package:flutter_ci/src/services/build_service.dart';
 import 'package:flutter_ci/src/utils/logger.dart';
 
@@ -25,24 +28,42 @@ void main(List<String> arguments) async {
   buildParser.addOption('ios-method',
       help: 'iOS export method',
       allowed: ['ad-hoc', 'development', 'app-store', 'enterprise']);
+  buildParser.addOption('flavor',
+      help: 'Build flavor (e.g. dev, staging, prod)');
   buildParser.addFlag('parallel',
-      defaultsTo: true,
-      help: 'Run builds in parallel');
-  buildParser.addFlag('coverage', help: 'Run flutter test --coverage before building', defaultsTo: false);
-  buildParser.addMultiOption('define', abbr: 'd', help: 'Pass --dart-define environment variables');
+      defaultsTo: true, help: 'Run builds in parallel');
+  buildParser.addFlag('coverage',
+      help: 'Run flutter test --coverage before building', defaultsTo: false);
+  buildParser.addMultiOption('define',
+      abbr: 'd', help: 'Pass --dart-define environment variables');
 
   // Release Command
   final releaseParser = parser.addCommand('release');
-  releaseParser.addFlag('notes', help: 'Generate release notes from git commits');
+  releaseParser.addFlag('notes',
+      help: 'Generate release notes from git commits');
   releaseParser.addFlag('upload', help: 'Trigger distribution uploads');
-  releaseParser.addFlag('commit', help: 'Commit the updated pubspec.yaml', defaultsTo: false);
-  releaseParser.addFlag('tag', help: 'Create a git tag for the new version', defaultsTo: false);
-  releaseParser.addFlag('changelog', help: 'Append release notes to CHANGELOG.md', defaultsTo: false);
-  releaseParser.addFlag('app-store', help: 'Upload to Apple App Store Connect', defaultsTo: false);
-  releaseParser.addFlag('play-store', help: 'Upload to Google Play Console', defaultsTo: false);
+  releaseParser.addFlag('commit',
+      help: 'Commit the updated pubspec.yaml', defaultsTo: false);
+  releaseParser.addFlag('tag',
+      help: 'Create a git tag for the new version', defaultsTo: false);
+  releaseParser.addFlag('changelog',
+      help: 'Append release notes to CHANGELOG.md', defaultsTo: false);
+  releaseParser.addFlag('app-store',
+      help: 'Upload to Apple App Store Connect', defaultsTo: false);
+  releaseParser.addFlag('play-store',
+      help: 'Upload to Google Play Console', defaultsTo: false);
 
   // Bump Command
   parser.addCommand('bump');
+
+  // Doctor Command
+  parser.addCommand('doctor');
+
+  // Init Command
+  parser.addCommand('init');
+
+  // List Command
+  parser.addCommand('list');
 
   // Version Command
   parser.addCommand('version');
@@ -73,6 +94,7 @@ void main(List<String> arguments) async {
           platform: cmdResult['platform'],
           androidFormat: cmdResult['android-format'],
           iosMethod: cmdResult['ios-method'],
+          flavor: cmdResult['flavor'],
           parallel: cmdResult['parallel'],
           coverage: cmdResult['coverage'],
           defines: cmdResult['define'] as List<String>?,
@@ -96,8 +118,20 @@ void main(List<String> arguments) async {
         await BumpCommand().run();
         break;
 
+      case 'doctor':
+        await DoctorCommand().run();
+        break;
+
+      case 'init':
+        await InitCommand().run();
+        break;
+
+      case 'list':
+        await ListCommand().run();
+        break;
+
       case 'version':
-        print("flutter_ci version: 1.0.0");
+        print("flutter_ci version: 0.0.2");
         break;
 
       case 'clean-builds':
@@ -125,11 +159,13 @@ void _printUsage(ArgParser parser) {
   print("\n🚀 FLUTTER CI - Command Line Interface\n");
   print("Usage: flutter_ci <command> [arguments]\n");
   print("Available commands:");
-  print("  build            🚀 Start CI build process (supports flutter_ci.yaml)");
+  print(
+      "  build            🚀 Start CI build process (supports flutter_ci.yaml)");
   print("    Options:");
   print("      --coverage   Run tests with coverage");
   print("      -d, --define Pass --dart-define vars");
-  print("  release          📦 Full release cycle (bump, tag, build, distribute)");
+  print(
+      "  release          📦 Full release cycle (bump, tag, build, distribute)");
   print("    Options:");
   print("      --notes      Generate release notes from git");
   print("      --changelog  Append release notes to CHANGELOG.md");
@@ -140,6 +176,9 @@ void _printUsage(ArgParser parser) {
   print("      --tag        Create a git version tag\n");
   print("  clean-builds     🧹 Delete the build/ directory");
   print("  bump             📈 Bump version in pubspec.yaml");
+  print("  doctor           🩺 Show environment diagnostics");
+  print("  init             📝 Generate default flutter_ci.yaml config");
+  print("  list             📄 List previous builds");
   print("  yaml-guide       📜 Show complete flutter_ci.yaml config guide");
   print("  version          🔢 Show current version");
   print("  help             ❓ Show this help message\n");

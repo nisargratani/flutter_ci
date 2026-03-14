@@ -11,14 +11,14 @@ class DistributionService {
     String? releaseNotes,
   }) async {
     Logger.info("Uploading to Firebase App Distribution: $artifactPath");
-    
-    final notesArg = releaseNotes != null ? " --release-notes \"$releaseNotes\"" : "";
+
+    final notesArg =
+        releaseNotes != null ? " --release-notes \"$releaseNotes\"" : "";
     final testersArg = testers != null ? " --testers \"$testers\"" : "";
-    
+
     try {
       await shell.run(
-        "firebase appdistribution:distribute \"$artifactPath\" --app \"$appId\"$notesArg$testersArg"
-      );
+          "firebase appdistribution:distribute \"$artifactPath\" --app \"$appId\"$notesArg$testersArg");
       Logger.success("Firebase distribution successful!");
     } catch (e) {
       Logger.error("Firebase distribution failed: $e");
@@ -30,18 +30,17 @@ class DistributionService {
     required String folderId,
   }) async {
     Logger.info("Uploading to Google Drive: $artifactPath");
-    
+
     try {
       // Using 'gdrive' CLI tool
-      await shell.run(
-        "gdrive upload --parent \"$folderId\" \"$artifactPath\""
-      );
+      await shell.run("gdrive upload --parent \"$folderId\" \"$artifactPath\"");
       Logger.success("Google Drive upload successful!");
     } catch (e) {
       Logger.error("Google Drive upload failed: $e");
       Logger.info("Ensure 'gdrive' CLI is installed and authenticated.");
     }
   }
+
   Future<void> sendWebhook({
     required String url,
     required String message,
@@ -67,12 +66,12 @@ class DistributionService {
     Logger.info("Uploading to Apple App Store Connect: $artifactPath");
     try {
       await shell.run(
-        "xcrun altool --upload-app -f \"$artifactPath\" -t ios -u \"$username\" -p \"$password\""
-      );
+          "xcrun altool --upload-app -f \"$artifactPath\" -t ios -u \"$username\" -p \"$password\"");
       Logger.success("App Store upload successful!");
     } catch (e) {
       Logger.error("App Store upload failed: $e");
-      Logger.info("Ensure you have properly configured app-specific passwords for altool.");
+      Logger.info(
+          "Ensure you have properly configured app-specific passwords for altool.");
     }
   }
 
@@ -85,13 +84,12 @@ class DistributionService {
     try {
       // Example using fastlane supply directly
       await shell.run(
-        "fastlane supply --apk \"$artifactPath\" --package_name \"$packageName\" --json_key \"$jsonKeyPath\""
-      );
+          "fastlane supply --apk \"$artifactPath\" --package_name \"$packageName\" --json_key \"$jsonKeyPath\"");
       Logger.success("Play Store upload successful!");
     } catch (e) {
       Logger.error("Play Store upload failed: $e");
-      Logger.info("Ensure fastlane is installed and the Google Play JSON key path is correct.");
+      Logger.info(
+          "Ensure fastlane is installed and the Google Play JSON key path is correct.");
     }
   }
 }
-

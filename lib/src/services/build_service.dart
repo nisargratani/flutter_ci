@@ -7,21 +7,44 @@ class BuildService {
   /// The shell instance used for executing commands.
   final shell = Shell(verbose: true);
 
+  File? _logFile;
+
+  void setLogFile(File logFile) {
+    _logFile = logFile;
+  }
+
+  Future<List<ProcessResult>> _run(String cmd) async {
+    final results = await shell.run(cmd);
+    if (_logFile != null) {
+      _logFile!.writeAsStringSync("\n> \$cmd\n", mode: FileMode.append);
+      for (var res in results) {
+        _logFile!
+            .writeAsStringSync(res.stdout.toString(), mode: FileMode.append);
+        _logFile!
+            .writeAsStringSync(res.stderr.toString(), mode: FileMode.append);
+      }
+    }
+    return results;
+  }
+
   /// Builds the Android artifact (APK or AAB).
   Future<void> buildAndroid({
     String format = 'apk',
     String? buildName,
     int? buildNumber,
     String? extraFlags,
+    String? flavor,
   }) async {
     final nameArg = buildName != null ? " --build-name=$buildName" : "";
     final numberArg = buildNumber != null ? " --build-number=$buildNumber" : "";
-    final flags = extraFlags != null && extraFlags.isNotEmpty ? " $extraFlags" : "";
+    final flavorArg = flavor != null ? " --flavor=$flavor" : "";
+    final flags =
+        extraFlags != null && extraFlags.isNotEmpty ? " $extraFlags" : "";
 
     if (format == 'aab') {
-      await shell.run('flutter build appbundle$flags$nameArg$numberArg');
+      await _run('flutter build appbundle$flags$flavorArg$nameArg$numberArg');
     } else {
-      await shell.run('flutter build apk$flags$nameArg$numberArg');
+      await _run('flutter build apk$flags$flavorArg$nameArg$numberArg');
     }
   }
 
@@ -31,20 +54,24 @@ class BuildService {
     String? buildName,
     int? buildNumber,
     String? extraFlags,
+    String? flavor,
   }) async {
     final nameArg = buildName != null ? " --build-name=$buildName" : "";
     final numberArg = buildNumber != null ? " --build-number=$buildNumber" : "";
-    final flags = extraFlags != null && extraFlags.isNotEmpty ? " $extraFlags" : "";
+    final flavorArg = flavor != null ? " --flavor=$flavor" : "";
+    final flags =
+        extraFlags != null && extraFlags.isNotEmpty ? " $extraFlags" : "";
 
     // Ensuring we use the correct format for Flutter's export-method flag
     // The methods mapping is:
     // app-store, ad-hoc, development, enterprise
-    await shell.run('flutter build ipa --export-method=$method$flags$nameArg$numberArg');
+    await _run(
+        'flutter build ipa --export-method=$method$flags$flavorArg$nameArg$numberArg');
   }
 
   /// Cleans the Flutter project.
   Future<void> clean() async {
-    await shell.run('flutter clean');
+    await _run('flutter clean');
   }
 
   /// Deletes the builds folder specifically.
@@ -60,7 +87,7 @@ class BuildService {
 
   /// Runs `flutter pub get`.
   Future<void> pubGet() async {
-    await shell.run('flutter pub get');
+    await _run('flutter pub get');
   }
 
   /// Executes a complex shell command string via a temporary script.
@@ -73,10 +100,10 @@ class BuildService {
     tempFile.writeAsStringSync("#!/bin/sh\n$command");
 
     // Make executable
-    await shell.run('chmod +x ${tempFile.path}');
+    await _run('chmod +x ${tempFile.path}');
 
     try {
-      await shell.run(tempFile.path);
+      await _run(tempFile.path);
     } finally {
       if (tempFile.existsSync()) {
         tempFile.deleteSync();

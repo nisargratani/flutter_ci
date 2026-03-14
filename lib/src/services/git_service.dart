@@ -35,7 +35,8 @@ class GitService {
 
   Future<String> getRecentCommits({int count = 10}) async {
     try {
-      final results = await shell.run('git log -n $count --pretty=format:"- %s"');
+      final results =
+          await shell.run('git log -n $count --pretty=format:"- %s"');
       return results.map((r) => r.outText).join('\n');
     } catch (e) {
       Logger.error("Failed to get recent commits: $e");

@@ -1,5 +1,9 @@
 # flutter_ci
 
+[![pub version](https://img.shields.io/pub/v/flutter_ci.svg)](https://pub.dev/packages/flutter_ci)
+[![likes](https://img.shields.io/pub/likes/flutter_ci)](https://pub.dev/packages/flutter_ci/score)
+[![popularity](https://img.shields.io/pub/popularity/flutter_ci)](https://pub.dev/packages/flutter_ci/score)
+
 A powerful Flutter CLI tool designed for CI/CD automation. It simplifies the build process by handling version bumps, generating parallel builds (APK/IPA), and organizing artifacts into versioned directories with full git integration.
 
 ## Features
@@ -24,13 +28,16 @@ dart pub global activate flutter_ci
 ## Quick Start
 
 ```bash
-# 1. Create a config file (optional but recommended)
-# flutter_ci.yaml
+# 1. Initialize the project config (generates flutter_ci.yaml)
+flutter_ci init
 
-# 2. Run a build (uses config or defaults)
-flutter_ci build
+# 2. Check your environment setup
+flutter_ci doctor
 
-# 3. Perform a full release
+# 3. Run a build (uses config or defaults)
+flutter_ci build --flavor prod
+
+# 4. Perform a full release
 flutter_ci release --notes --upload
 ```
 
@@ -79,8 +86,8 @@ distribution:
     folder_id: "your-folder-id"
   app_store:
     enabled: false
-    username: "your-apple-id"
-    password: "app-specific-password"
+    username: "\${APP_STORE_USERNAME}" # Safer to use environment variables
+    password: "\${APP_STORE_PASSWORD}"
   play_store:
     enabled: false
     package_name: "com.example.app"
@@ -105,6 +112,7 @@ flutter_ci build [options]
 - `--version, -v`: Override version.
 - `--no-bump`: Skip version increment.
 - `--platform, -p`: Target platform (android, ios, both).
+- `--flavor`: Specify build flavor (e.g., `dev`, `staging`, `prod`).
 - `--parallel`: Run Android/iOS builds concurrently (default: true).
 - `--coverage`: Run tests with coverage generation before building.
 - `--define, -d`: Pass custom dart-defines (e.g. `-d API_KEY=123`).
@@ -134,18 +142,74 @@ flutter_ci release [options]
 #### `bump`
 Increment only the build number in your `pubspec.yaml`.
 
+#### `doctor`
+Run environment checks to ensure Flutter, Dart, Android SDK, Xcode, and Git are perfectly set up internally. 
+
+#### `init`
+Auto-generate a default `flutter_ci.yaml` in your project root.
+
+#### `list`
+List all currently generated builds sitting in your `builds/` directory.
+
 #### `clean-builds`
 Delete the `build/` directory to start fresh.
 
 ## Artifacts Structure
 
-Outputs are organized logically:
+Outputs are organized logically and include full build logs:
 ```text
 builds/
   v1.0.0+5/
     app-release.apk
     app-release.ipa
     build_info.json  <-- Metadata (commit, time, etc.)
+    build.log        <-- Flutter shell stdout logger capture
+```
+
+## Terminal Output Example
+
+```bash
+$ flutter_ci release
+
+✔ Version bumped → 1.2.0+45
+✔ Running tests
+✔ Generating coverage
+✔ Android build started
+✔ iOS build started
+✔ Android build completed
+✔ iOS build completed
+✔ Artifacts saved → builds/v1.2.0+45
+✔ Git tag created → v1.2.0
+✔ Uploaded to Firebase App Distribution
+✔ Slack notification sent
+```
+
+## GitHub Actions Example
+
+Most Flutter devs want CI on GitHub. Add this script to `.github/workflows/flutter_ci.yml`:
+
+```yaml
+name: Flutter CI
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+
+      - name: Activate flutter_ci
+        run: dart pub global activate flutter_ci
+
+      - name: Build
+        run: flutter_ci build
 ```
 
 ## Contributing

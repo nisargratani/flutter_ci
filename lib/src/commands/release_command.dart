@@ -23,9 +23,9 @@ class ReleaseCommand {
     bool playStore = false,
   }) async {
     await configService.loadConfig();
-    
+
     Logger.info("🚀 Starting Release Process...");
-    
+
     // 1. Version Bump
     final manualVersion = configService.getValue('manual_version');
     if (manualVersion != null) {
@@ -35,7 +35,7 @@ class ReleaseCommand {
     }
     final newVersion = versionService.getVersion();
     final appName = versionService.getAppName();
-    
+
     // 2. Git Commit & Tag
     final resolvedCommit = configService.getValue('git.commit') ?? commit;
     final resolvedTag = configService.getValue('git.tag') ?? createTag;
@@ -46,15 +46,16 @@ class ReleaseCommand {
     if (resolvedTag == true) {
       await gitService.createTag("v$newVersion");
     }
-    
+
     // 3. Generate Release Notes if requested
     String? notes;
     if (generateNotes) {
       Logger.info("Generating release notes from git...");
       notes = await gitService.getRecentCommits();
       Logger.info("\nRelease Notes Preview:\n$notes\n");
-      
-      final writeChangelog = configService.getValue('git.changelog') ?? changelog;
+
+      final writeChangelog =
+          configService.getValue('git.changelog') ?? changelog;
       if (writeChangelog == true && notes.isNotEmpty) {
         Logger.info("Appending notes to CHANGELOG.md...");
         final file = File('CHANGELOG.md');
@@ -64,23 +65,26 @@ class ReleaseCommand {
         Logger.success("CHANGELOG.md updated!");
       }
     }
-    
+
     // 4. Run Build
     await buildCommand.run(shouldBump: false); // Already bumped
-    
+
     // 5. Distribution if requested
     // Priority: YAML > CLI
-    final resolvedUpload = configService.getValue('distribution.enabled') ?? upload;
-    
+    final resolvedUpload =
+        configService.getValue('distribution.enabled') ?? upload;
+
     if (resolvedUpload == true) {
-      final googleDriveConfig = configService.getValue('distribution.google_drive');
+      final googleDriveConfig =
+          configService.getValue('distribution.google_drive');
       final firebaseConfig = configService.getValue('distribution.firebase');
       final appStoreConfig = configService.getValue('distribution.app_store');
       final playStoreConfig = configService.getValue('distribution.play_store');
-      
+
       final artifactsDir = "builds/v$newVersion";
       final apkPath = "$artifactsDir/$appName-$newVersion.apk";
-      final aabPath = "$artifactsDir/$appName-$newVersion.aab"; // Fallback for Play Store
+      final aabPath =
+          "$artifactsDir/$appName-$newVersion.aab"; // Fallback for Play Store
       final ipaPath = "$artifactsDir/$appName-$newVersion.ipa";
 
       if (googleDriveConfig != null && googleDriveConfig['enabled'] == true) {
@@ -89,7 +93,7 @@ class ReleaseCommand {
           folderId: googleDriveConfig['folder_id'],
         );
       }
-      
+
       if (firebaseConfig != null && firebaseConfig['enabled'] == true) {
         // Firebase CLI expects the path, usually we'd pass the built artifact directly
         await distributionService.uploadToFirebase(
@@ -99,8 +103,9 @@ class ReleaseCommand {
           releaseNotes: notes,
         );
       }
-      
-      if (appStoreConfig != null && (appStoreConfig['enabled'] == true || appStore)) {
+
+      if (appStoreConfig != null &&
+          (appStoreConfig['enabled'] == true || appStore)) {
         await distributionService.uploadToAppStore(
           artifactPath: ipaPath,
           username: appStoreConfig['username'] ?? '',
@@ -108,7 +113,8 @@ class ReleaseCommand {
         );
       }
 
-      if (playStoreConfig != null && (playStoreConfig['enabled'] == true || playStore)) {
+      if (playStoreConfig != null &&
+          (playStoreConfig['enabled'] == true || playStore)) {
         await distributionService.uploadToPlayStore(
           artifactPath: aabPath, // Usually you upload AAB to Play Store
           jsonKeyPath: playStoreConfig['json_key_path'] ?? '',
@@ -122,7 +128,8 @@ class ReleaseCommand {
     if (slackUrl != null && slackUrl.isNotEmpty) {
       await distributionService.sendWebhook(
         url: slackUrl,
-        message: "🚀 Version $newVersion of $appName is ready!\n\nRelease Notes:\n$notes",
+        message:
+            "🚀 Version $newVersion of $appName is ready!\n\nRelease Notes:\n$notes",
       );
     }
 
@@ -130,10 +137,11 @@ class ReleaseCommand {
     if (discordUrl != null && discordUrl.isNotEmpty) {
       await distributionService.sendWebhook(
         url: discordUrl,
-        message: "🚀 **Version $newVersion of $appName is ready!**\n\n**Release Notes:**\n$notes",
+        message:
+            "🚀 **Version $newVersion of $appName is ready!**\n\n**Release Notes:**\n$notes",
       );
     }
-    
+
     Logger.success("Release v$newVersion completed successfully! 🌟");
   }
 }

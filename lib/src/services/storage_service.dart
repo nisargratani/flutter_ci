@@ -14,7 +14,7 @@ class StorageService {
     String? gitCommit,
   }) async {
     Logger.info("Starting artifact storage...");
-    
+
     // Naming pattern: builds/v1.2.0+45/
     final folderName = "builds/v$version";
     final destDir = Directory(folderName);
@@ -85,7 +85,7 @@ class StorageService {
         "git_commit": gitCommit ?? "unknown",
         "flutter_version": await _getFlutterVersion(),
       };
-      
+
       final infoFile = File(path.join(destDir.path, "build_info.json"));
       infoFile.writeAsStringSync(jsonEncode(buildInfo));
       Logger.success("Generated build_info.json");

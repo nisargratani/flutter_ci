@@ -1,6 +1,6 @@
 name: flutter_ci
 description: Flutter CLI tool for CI/CD automation including version bump, build generation and artifact storage.
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/nisargratani/flutter_ci
 repository: https://github.com/nisargratani/flutter_ci
 issue_tracker: https://github.com/nisargratani/flutter_ci/issues
@@ -18,11 +18,11 @@ dependencies:
   args: ^2.5.0
   yaml: ^3.1.2
   yaml_edit: ^2.2.1
-  process_run: ^0.13.3
+  process_run: ^1.2.2+1
   path: ^1.9.0
 
 dev_dependencies:
-  lints: ^3.0.0
+  lints: ^5.0.0
   test: ^1.25.0
 
 executables:

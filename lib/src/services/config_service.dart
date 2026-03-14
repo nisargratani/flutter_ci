@@ -27,10 +27,26 @@ class ConfigService {
     return map.map((key, value) {
       if (value is Map) {
         return MapEntry(key.toString(), _recursiveConvertMap(value));
-      } else if (value is YamlList) {
-        return MapEntry(key.toString(), value.toList());
+      } else if (value is Iterable) {
+        return MapEntry(
+            key.toString(),
+            value
+                .map((e) => e is String ? _interpolateEnvString(e) : e)
+                .toList());
+      } else if (value is String) {
+        return MapEntry(key.toString(), _interpolateEnvString(value));
       }
       return MapEntry(key.toString(), value);
+    });
+  }
+
+  String _interpolateEnvString(String value) {
+    return value.replaceAllMapped(RegExp(r'\$\{(\w+)\}'), (match) {
+      final envVar = match.group(1);
+      if (envVar != null && Platform.environment.containsKey(envVar)) {
+        return Platform.environment[envVar]!;
+      }
+      return match.group(0)!;
     });
   }
 

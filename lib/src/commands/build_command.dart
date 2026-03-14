@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_ci/src/services/build_service.dart';
 import 'package:flutter_ci/src/services/version_service.dart';
 import 'package:flutter_ci/src/services/storage_service.dart';
@@ -25,6 +26,7 @@ class BuildCommand {
     String? platform,
     String? androidFormat,
     String? iosMethod,
+    String? flavor,
     bool parallel = true,
     bool? coverage,
     List<String>? defines,
@@ -33,18 +35,28 @@ class BuildCommand {
 
     // Merge configuration (Config File > CLI flag > Default)
     // Priority: YAML > CLI > Default
-    final resolvedPlatform = configService.getValue('platform') ?? platform ?? 'both';
-    final resolvedManualVersion = configService.getValue('manual_version') ?? version;
-    final resolvedShouldBump = configService.getValue('version_bump') ?? shouldBump ?? true;
-    final resolvedAndroidFormat = configService.getValue('android.format') ?? androidFormat ?? 'apk';
-    final resolvedIosMethod = configService.getValue('ios.method') ?? iosMethod ?? 'ad-hoc';
-    final resolvedPreBuildCmd = configService.getValue('pre_build_command') ?? preBuildCmd;
-    final resolvedAndroidBuildCmd = configService.getValue('android.build_command') ?? androidBuildCmd;
-    final resolvedIosBuildCmd = configService.getValue('ios.build_command') ?? iosBuildCmd;
-    
+    final resolvedPlatform =
+        configService.getValue('platform') ?? platform ?? 'both';
+    final resolvedManualVersion =
+        configService.getValue('manual_version') ?? version;
+    final resolvedShouldBump =
+        configService.getValue('version_bump') ?? shouldBump ?? true;
+    final resolvedAndroidFormat =
+        configService.getValue('android.format') ?? androidFormat ?? 'apk';
+    final resolvedIosMethod =
+        configService.getValue('ios.method') ?? iosMethod ?? 'ad-hoc';
+    final resolvedFlavor = configService.getValue('flavor') ?? flavor;
+    final resolvedPreBuildCmd =
+        configService.getValue('pre_build_command') ?? preBuildCmd;
+    final resolvedAndroidBuildCmd =
+        configService.getValue('android.build_command') ?? androidBuildCmd;
+    final resolvedIosBuildCmd =
+        configService.getValue('ios.build_command') ?? iosBuildCmd;
+
     // Coverage & Defines
-    final resolvedCoverage = configService.getValue('test.coverage') ?? coverage ?? false;
-    
+    final resolvedCoverage =
+        configService.getValue('test.coverage') ?? coverage ?? false;
+
     // Merge env map from YAML with defines from CLI
     final envMap = configService.getValue<Map>('env') ?? {};
     final mergedDefines = <String>[];
@@ -62,7 +74,10 @@ class BuildCommand {
     Logger.info("----------------------------------");
     Logger.info("Selected Options:");
     Logger.info("  Platform: $resolvedPlatform");
-    if (resolvedManualVersion != null) Logger.info("  Override Version: $resolvedManualVersion");
+    if (resolvedFlavor != null) Logger.info("  Flavor: $resolvedFlavor");
+    if (resolvedManualVersion != null) {
+      Logger.info("  Override Version: $resolvedManualVersion");
+    }
     Logger.info("  Bump Build Number: $resolvedShouldBump");
     if (resolvedCoverage) Logger.info("  Test Coverage: Enabled");
     if (mergedDefines.isNotEmpty) Logger.info("  Dart Defines: $mergedDefines");
@@ -79,6 +94,14 @@ class BuildCommand {
     final buildName = versionService.getVersionName();
     final buildNumber = versionService.getBuildNumber();
 
+    // Prepare Build Log Output Directory
+    final tempVersion = versionService.getVersion();
+    final destDir = Directory("builds/v$tempVersion");
+    if (!destDir.existsSync()) {
+      destDir.createSync(recursive: true);
+    }
+    buildService.setLogFile(File('${destDir.path}/build.log'));
+
     // 1.5. Coverage
     if (resolvedCoverage) {
       Logger.info("Running tests with coverage...");
@@ -93,7 +116,7 @@ class BuildCommand {
       final preBuildSteps = configService.getValue<List>('pre_build');
       if (preBuildSteps != null && preBuildSteps.isNotEmpty) {
         for (var step in preBuildSteps) {
-           await buildService.execute(step.toString());
+          await buildService.execute(step.toString());
         }
       } else {
         Logger.info("Running default pre-build commands (clean, pub get)");
@@ -106,24 +129,30 @@ class BuildCommand {
     final builds = <Future>[];
 
     if (resolvedPlatform == 'android' || resolvedPlatform == 'both') {
-      final actCmd = resolvedAndroidBuildCmd != null ? "$resolvedAndroidBuildCmd $defineString".trim() : null;
+      final actCmd = resolvedAndroidBuildCmd != null
+          ? "$resolvedAndroidBuildCmd $defineString".trim()
+          : null;
       builds.add(_runAndroidBuild(
-        actCmd, 
+        actCmd,
         resolvedAndroidFormat,
         buildName,
         buildNumber,
         defineString,
+        resolvedFlavor,
       ));
     }
 
     if (resolvedPlatform == 'ios' || resolvedPlatform == 'both') {
-      final actCmd = resolvedIosBuildCmd != null ? "$resolvedIosBuildCmd $defineString".trim() : null;
+      final actCmd = resolvedIosBuildCmd != null
+          ? "$resolvedIosBuildCmd $defineString".trim()
+          : null;
       builds.add(_runIosBuild(
-        actCmd, 
+        actCmd,
         resolvedIosMethod,
         buildName,
         buildNumber,
         defineString,
+        resolvedFlavor,
       ));
     }
 
@@ -141,9 +170,9 @@ class BuildCommand {
       final appName = versionService.getAppName();
       final currentVersion = versionService.getVersion();
       final commit = await gitService.getCurrentCommitHash();
-      
+
       await storageService.storeArtifacts(
-        appName: appName, 
+        appName: appName,
         version: currentVersion,
         gitCommit: commit,
       );
@@ -154,7 +183,13 @@ class BuildCommand {
     Logger.success("Build session completed");
   }
 
-  Future<void> _runAndroidBuild(String? customCmd, String format, String buildName, int buildNumber, String defineString) async {
+  Future<void> _runAndroidBuild(
+      String? customCmd,
+      String format,
+      String buildName,
+      int buildNumber,
+      String defineString,
+      String? flavor) async {
     try {
       if (customCmd != null && customCmd.isNotEmpty) {
         Logger.info("Running custom Android build command: $customCmd");
@@ -166,6 +201,7 @@ class BuildCommand {
           buildName: buildName,
           buildNumber: buildNumber,
           extraFlags: defineString,
+          flavor: flavor,
         );
       }
     } catch (e) {
@@ -173,7 +209,8 @@ class BuildCommand {
     }
   }
 
-  Future<void> _runIosBuild(String? customCmd, String method, String buildName, int buildNumber, String defineString) async {
+  Future<void> _runIosBuild(String? customCmd, String method, String buildName,
+      int buildNumber, String defineString, String? flavor) async {
     try {
       if (customCmd != null && customCmd.isNotEmpty) {
         Logger.info("Running custom iOS build command: $customCmd");
@@ -185,6 +222,7 @@ class BuildCommand {
           buildName: buildName,
           buildNumber: buildNumber,
           extraFlags: defineString,
+          flavor: flavor,
         );
       }
     } catch (e) {
@@ -192,4 +230,3 @@ class BuildCommand {
     }
   }
 }
-

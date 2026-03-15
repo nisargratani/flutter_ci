@@ -21,16 +21,32 @@ class ReleaseCommand {
     bool changelog = false,
     bool appStore = false,
     bool playStore = false,
+    String? version,
+    bool? shouldBump,
+    String? platform,
+    String? androidFormat,
+    String? iosMethod,
+    String? preBuildCmd,
+    String? androidBuildCmd,
+    String? iosBuildCmd,
+    String? flavor,
+    bool parallel = true,
+    bool coverage = false,
+    List<String>? defines,
   }) async {
     await configService.loadConfig();
 
     Logger.info("🚀 Starting Release Process...");
 
     // 1. Version Bump
-    final manualVersion = configService.getValue('manual_version');
-    if (manualVersion != null) {
-      versionService.updateVersion(manualVersion);
-    } else {
+    final resolvedManualVersion =
+        configService.getValue('manual_version') ?? version;
+    final resolvedShouldBump =
+        configService.getValue('version_bump') ?? shouldBump ?? true;
+
+    if (resolvedManualVersion != null) {
+      versionService.updateVersion(resolvedManualVersion);
+    } else if (resolvedShouldBump) {
       versionService.bumpBuildNumber();
     }
     final newVersion = versionService.getVersion();
@@ -67,7 +83,20 @@ class ReleaseCommand {
     }
 
     // 4. Run Build
-    await buildCommand.run(shouldBump: false); // Already bumped
+    await buildCommand.run(
+      version: newVersion,
+      shouldBump: false, // Already bumped
+      platform: platform,
+      androidFormat: androidFormat,
+      iosMethod: iosMethod,
+      preBuildCmd: preBuildCmd,
+      androidBuildCmd: androidBuildCmd,
+      iosBuildCmd: iosBuildCmd,
+      flavor: flavor,
+      parallel: parallel,
+      coverage: coverage,
+      defines: defines,
+    );
 
     // 5. Distribution if requested
     // Priority: YAML > CLI

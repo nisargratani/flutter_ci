@@ -36,9 +36,44 @@ void main(List<String> arguments) async {
       help: 'Run flutter test --coverage before building', defaultsTo: false);
   buildParser.addMultiOption('define',
       abbr: 'd', help: 'Pass --dart-define environment variables');
+  buildParser.addOption('pre-build',
+      help: 'Custom pre-build command to run before the build step');
+  buildParser.addOption('android-build-cmd',
+      help: 'Custom Android build command');
+  buildParser.addOption('ios-build-cmd',
+      help: 'Custom iOS build command');
 
   // Release Command
   final releaseParser = parser.addCommand('release');
+  releaseParser.addOption('version',
+      abbr: 'v', help: 'Override the version in pubspec.yaml');
+  releaseParser.addFlag('bump',
+      defaultsTo: null, // Allow null to detect if user provided it
+      negatable: true,
+      help: 'Automatically bump build number');
+  releaseParser.addOption('platform',
+      abbr: 'p',
+      help: 'Target platform for the build',
+      allowed: ['android', 'ios', 'both']);
+  releaseParser.addOption('android-format',
+      help: 'Android build format', allowed: ['apk', 'aab']);
+  releaseParser.addOption('ios-method',
+      help: 'iOS export method',
+      allowed: ['ad-hoc', 'development', 'app-store', 'enterprise']);
+  releaseParser.addOption('flavor',
+      help: 'Build flavor (e.g. dev, staging, prod)');
+  releaseParser.addFlag('parallel',
+      defaultsTo: true, help: 'Run builds in parallel');
+  releaseParser.addFlag('coverage',
+      help: 'Run flutter test --coverage before building', defaultsTo: false);
+  releaseParser.addMultiOption('define',
+      abbr: 'd', help: 'Pass --dart-define environment variables');
+  releaseParser.addOption('pre-build',
+      help: 'Custom pre-build command to run before the build step');
+  releaseParser.addOption('android-build-cmd',
+      help: 'Custom Android build command');
+  releaseParser.addOption('ios-build-cmd',
+      help: 'Custom iOS build command');
   releaseParser.addFlag('notes',
       help: 'Generate release notes from git commits');
   releaseParser.addFlag('upload', help: 'Trigger distribution uploads');
@@ -94,6 +129,9 @@ void main(List<String> arguments) async {
           platform: cmdResult['platform'],
           androidFormat: cmdResult['android-format'],
           iosMethod: cmdResult['ios-method'],
+          preBuildCmd: cmdResult['pre-build'],
+          androidBuildCmd: cmdResult['android-build-cmd'],
+          iosBuildCmd: cmdResult['ios-build-cmd'],
           flavor: cmdResult['flavor'],
           parallel: cmdResult['parallel'],
           coverage: cmdResult['coverage'],
@@ -111,6 +149,18 @@ void main(List<String> arguments) async {
           changelog: cmdResult['changelog'],
           appStore: cmdResult['app-store'],
           playStore: cmdResult['play-store'],
+          version: cmdResult['version'],
+          shouldBump: cmdResult['bump'],
+          platform: cmdResult['platform'],
+          androidFormat: cmdResult['android-format'],
+          iosMethod: cmdResult['ios-method'],
+          preBuildCmd: cmdResult['pre-build'],
+          androidBuildCmd: cmdResult['android-build-cmd'],
+          iosBuildCmd: cmdResult['ios-build-cmd'],
+          flavor: cmdResult['flavor'],
+          parallel: cmdResult['parallel'],
+          coverage: cmdResult['coverage'],
+          defines: cmdResult['define'] as List<String>?,
         );
         break;
 
@@ -164,9 +214,17 @@ void _printUsage(ArgParser parser) {
   print("    Options:");
   print("      --coverage   Run tests with coverage");
   print("      -d, --define Pass --dart-define vars");
+  print("      --pre-build  Custom pre-build command");
+  print("      --android-build-cmd Custom Android build command");
+  print("      --ios-build-cmd     Custom iOS build command");
   print(
       "  release          📦 Full release cycle (bump, tag, build, distribute)");
   print("    Options:");
+  print("      --coverage   Run tests with coverage");
+  print("      -d, --define Pass --dart-define vars");
+  print("      --pre-build  Custom pre-build command");
+  print("      --android-build-cmd Custom Android build command");
+  print("      --ios-build-cmd     Custom iOS build command");
   print("      --notes      Generate release notes from git");
   print("      --changelog  Append release notes to CHANGELOG.md");
   print("      --upload     Upload to configured platforms");

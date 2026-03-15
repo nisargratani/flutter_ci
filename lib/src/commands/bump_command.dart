@@ -1,4 +1,4 @@
-import '../services/version_service.dart';
+import 'package:flutter_ci/src/services/version_service.dart';
 
 /// The command responsible for bumping the build number in `pubspec.yaml`.
 class BumpCommand {

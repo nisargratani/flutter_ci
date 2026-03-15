@@ -1,9 +1,12 @@
 import 'package:process_run/shell.dart';
 import 'package:flutter_ci/src/utils/logger.dart';
 
+/// A service responsible for distributing build artifacts to various platforms.
 class DistributionService {
+  /// The shell instance used for executing commands.
   final shell = Shell(verbose: true);
 
+  /// Uploads the artifact at [artifactPath] to Firebase App Distribution.
   Future<void> uploadToFirebase({
     required String artifactPath,
     required String appId,
@@ -25,6 +28,7 @@ class DistributionService {
     }
   }
 
+  /// Uploads the artifact at [artifactPath] to Google Drive.
   Future<void> uploadToGoogleDrive({
     required String artifactPath,
     required String folderId,
@@ -41,6 +45,7 @@ class DistributionService {
     }
   }
 
+  /// Sends a webhook notification to the specified [url] with [message].
   Future<void> sendWebhook({
     required String url,
     required String message,
@@ -58,6 +63,7 @@ class DistributionService {
     }
   }
 
+  /// Uploads the artifact at [artifactPath] to Apple App Store Connect.
   Future<void> uploadToAppStore({
     required String artifactPath,
     required String username,
@@ -75,6 +81,7 @@ class DistributionService {
     }
   }
 
+  /// Uploads the artifact at [artifactPath] to Google Play Console.
   Future<void> uploadToPlayStore({
     required String artifactPath,
     required String jsonKeyPath,

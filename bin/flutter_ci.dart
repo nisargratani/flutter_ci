@@ -40,8 +40,7 @@ void main(List<String> arguments) async {
       help: 'Custom pre-build command to run before the build step');
   buildParser.addOption('android-build-cmd',
       help: 'Custom Android build command');
-  buildParser.addOption('ios-build-cmd',
-      help: 'Custom iOS build command');
+  buildParser.addOption('ios-build-cmd', help: 'Custom iOS build command');
 
   // Release Command
   final releaseParser = parser.addCommand('release');
@@ -72,8 +71,7 @@ void main(List<String> arguments) async {
       help: 'Custom pre-build command to run before the build step');
   releaseParser.addOption('android-build-cmd',
       help: 'Custom Android build command');
-  releaseParser.addOption('ios-build-cmd',
-      help: 'Custom iOS build command');
+  releaseParser.addOption('ios-build-cmd', help: 'Custom iOS build command');
   releaseParser.addFlag('notes',
       help: 'Generate release notes from git commits');
   releaseParser.addFlag('upload', help: 'Trigger distribution uploads');

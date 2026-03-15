@@ -1,9 +1,12 @@
 import 'package:process_run/shell.dart';
 import 'package:flutter_ci/src/utils/logger.dart';
 
+/// A service responsible for Git operations.
 class GitService {
+  /// The shell instance used for executing commands.
   final shell = Shell(verbose: false);
 
+  /// Returns the current git commit hash (short version).
   Future<String?> getCurrentCommitHash() async {
     try {
       final results = await shell.run('git rev-parse --short HEAD');
@@ -14,6 +17,7 @@ class GitService {
     }
   }
 
+  /// Commits the specified [files] with the given [message].
   Future<void> commitChanges(String message, List<String> files) async {
     try {
       await shell.run('git add ${files.join(' ')}');
@@ -24,6 +28,7 @@ class GitService {
     }
   }
 
+  /// Creates a git tag with the specified [tagName].
   Future<void> createTag(String tagName) async {
     try {
       await shell.run('git tag $tagName');
@@ -33,6 +38,7 @@ class GitService {
     }
   }
 
+  /// Retrieves the most recent [count] commits as release notes.
   Future<String> getRecentCommits({int count = 10}) async {
     try {
       final results =

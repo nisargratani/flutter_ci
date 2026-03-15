@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 import 'package:flutter_ci/src/utils/logger.dart';
 
+/// A service responsible for loading and parsing the `flutter_ci.yaml` configuration.
 class ConfigService {
   static const String _configFileName = 'flutter_ci.yaml';
 
   Map<String, dynamic> _config = {};
 
+  /// Loads the configuration from the YAML file if it exists.
   Future<void> loadConfig() async {
     final configFile = File(_configFileName);
     if (await configFile.exists()) {
@@ -50,6 +52,8 @@ class ConfigService {
     });
   }
 
+  /// Retrieves a value from the configuration using a dot-notated [key].
+  /// Returns [defaultValue] if the key is not found.
   T? getValue<T>(String key, {T? defaultValue}) {
     final parts = key.split('.');
     dynamic current = _config;
@@ -68,5 +72,6 @@ class ConfigService {
     return defaultValue;
   }
 
+  /// Returns the raw configuration map.
   Map<String, dynamic> get config => _config;
 }

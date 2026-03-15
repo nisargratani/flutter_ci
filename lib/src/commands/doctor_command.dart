@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter_ci/src/utils/logger.dart';
 
+/// The command responsible for diagnostic environment checks.
 class DoctorCommand {
+  /// Runs the diagnostic check.
   Future<void> run() async {
     Logger.info("🩺 flutter_ci doctor\n");
 
@@ -41,6 +43,7 @@ class DoctorCommand {
     }
   }
 
+  /// Prints an error message based on the [optional] flag.
   void _printError(String name, bool optional) {
     if (optional) {
       print("  \x1B[33m!\x1B[0m $name (Not found or not in PATH)");

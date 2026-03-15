@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter_ci/src/utils/logger.dart';
 
+/// The command responsible for generating the default configuration file.
 class InitCommand {
+  /// Runs the initialization process to create `flutter_ci.yaml`.
   Future<void> run() async {
     final file = File('flutter_ci.yaml');
     if (file.existsSync()) {

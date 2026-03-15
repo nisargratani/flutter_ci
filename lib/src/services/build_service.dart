@@ -9,6 +9,7 @@ class BuildService {
 
   File? _logFile;
 
+  /// Sets the log file for capturing build output.
   void setLogFile(File logFile) {
     _logFile = logFile;
   }
@@ -75,6 +76,7 @@ class BuildService {
   }
 
   /// Deletes the builds folder specifically.
+  /// Deletes the `builds/` folder specifically.
   Future<void> cleanBuilds() async {
     final buildDir = Directory('builds');
     if (await buildDir.exists()) {
@@ -86,6 +88,7 @@ class BuildService {
   }
 
   /// Runs `flutter pub get`.
+  /// Fetches package dependencies using `flutter pub get`.
   Future<void> pubGet() async {
     await _run('flutter pub get');
   }

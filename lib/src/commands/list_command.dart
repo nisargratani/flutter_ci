@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter_ci/src/utils/logger.dart';
 
+/// The command responsible for listing previous CI build artifacts.
 class ListCommand {
+  /// Runs the list operation by scanning the `builds/` directory.
   Future<void> run() async {
     final buildsDir = Directory('builds');
     if (!buildsDir.existsSync()) {

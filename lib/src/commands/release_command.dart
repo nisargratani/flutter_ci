@@ -6,13 +6,24 @@ import 'package:flutter_ci/src/services/config_service.dart';
 import 'package:flutter_ci/src/commands/build_command.dart';
 import 'package:flutter_ci/src/utils/logger.dart';
 
+/// The command responsible for the complete release lifecycle.
 class ReleaseCommand {
+  /// The command for building artifacts.
   final buildCommand = BuildCommand();
+
+  /// The service for git operations.
   final gitService = GitService();
+
+  /// The service for version management.
   final versionService = VersionService();
+
+  /// The service for configuration loading.
   final configService = ConfigService();
+
+  /// The service for artifact distribution.
   final distributionService = DistributionService();
 
+  /// Runs the complete release process including bumping, tagging, and building.
   Future<void> run({
     bool generateNotes = false,
     bool upload = false,

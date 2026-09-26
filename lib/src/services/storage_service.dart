@@ -8,10 +8,24 @@ class StorageService {
   /// Scans build directories and copies generated artifacts (.apk, .ipa, .aab)
   /// to a versioned folder in the `builds/` directory, renaming them to
   /// `appname-version` format.
-  Future<void> storeArtifacts({
+  ///
+  /// Searched locations:
+  /// * `build/app/outputs/flutter-apk/` for APKs,
+  /// * `build/app/outputs/bundle/` (including flavor folders such as
+  ///   `prodRelease/`) for AABs,
+  /// * `build/ios/ipa/` for IPAs.
+  ///
+  /// When [builtAfter] is given, artifacts last modified before it are
+  /// ignored, so stale outputs from earlier builds are not stored. If several
+  /// artifacts share an extension (for example `--split-per-abi` APKs), each
+  /// keeps its original name as a suffix: `appname-version-app-arm64-v8a-release.apk`.
+  ///
+  /// Also writes `build_info.json` and returns the stored artifact files.
+  Future<List<File>> storeArtifacts({
     required String appName,
     required String version,
     String? gitCommit,
+    DateTime? builtAfter,
   }) async {
     Logger.info("Starting artifact storage...");
 
@@ -23,93 +37,84 @@ class StorageService {
       destDir.createSync(recursive: true);
     }
 
-    int count = 0;
     final baseFileName = "$appName-$version";
+    final outputs = path.join(Directory.current.path, 'build');
+    final found = [
+      ..._scan(path.join(outputs, 'app', 'outputs', 'flutter-apk'), '.apk',
+          builtAfter),
+      ..._scan(
+          path.join(outputs, 'app', 'outputs', 'bundle'), '.aab', builtAfter),
+      ..._scan(path.join(outputs, 'ios', 'ipa'), '.ipa', builtAfter),
+    ];
 
-    // 1. Android Scan
-    final apkDirPath =
-        path.join(Directory.current.path, "build/app/outputs/flutter-apk");
-    final apkDir = Directory(apkDirPath);
-
-    if (apkDir.existsSync()) {
-      Logger.info("Scanning for Android artifacts in: $apkDirPath");
-      for (var entity in apkDir.listSync()) {
-        if (entity is File && entity.path.endsWith(".apk")) {
-          final ext = path.extension(entity.path);
-          final newName = "$baseFileName$ext";
-          entity.copySync(path.join(destDir.path, newName));
-          Logger.success("Stored Android artifact: $newName");
-          count++;
-        }
-      }
+    final stored = <File>[];
+    for (final artifact in found) {
+      final ext = path.extension(artifact.path);
+      final unique = found.where((f) => path.extension(f.path) == ext).length;
+      final newName = unique == 1
+          ? "$baseFileName$ext"
+          : "$baseFileName-${path.basenameWithoutExtension(artifact.path)}$ext";
+      stored.add(artifact.copySync(path.join(destDir.path, newName)));
+      Logger.success("Stored artifact: $newName");
     }
 
-    // 1b. Android AAB Scan
-    final aabDirPath =
-        path.join(Directory.current.path, "build/app/outputs/bundle/release");
-    final aabDir = Directory(aabDirPath);
-    if (aabDir.existsSync()) {
-      Logger.info("Scanning for Android AAB artifacts in: $aabDirPath");
-      for (var entity in aabDir.listSync()) {
-        if (entity is File && entity.path.endsWith(".aab")) {
-          final ext = path.extension(entity.path);
-          final newName = "$baseFileName$ext";
-          entity.copySync(path.join(destDir.path, newName));
-          Logger.success("Stored Android AAB artifact: $newName");
-          count++;
-        }
-      }
-    }
-
-    // 2. iOS Scan
-    final ipaDirPath = path.join(Directory.current.path, "build/ios/ipa");
-    final ipaDir = Directory(ipaDirPath);
-    if (ipaDir.existsSync()) {
-      Logger.info("Scanning for iOS artifacts in: $ipaDirPath");
-      for (var entity in ipaDir.listSync(recursive: true)) {
-        if (entity is File && entity.path.endsWith(".ipa")) {
-          final ext = path.extension(entity.path);
-          final newName = "$baseFileName$ext";
-          entity.copySync(path.join(destDir.path, newName));
-          Logger.success("Stored iOS artifact: $newName");
-          count++;
-        }
-      }
-    }
-
-    // 3. Generate build_info.json
+    // Generate build_info.json
     try {
       final buildInfo = {
+        "app_name": appName,
         "version": version,
         "build_time": DateTime.now().toIso8601String(),
         "git_commit": gitCommit ?? "unknown",
         "flutter_version": await _getFlutterVersion(),
+        "artifacts": [for (final f in stored) path.basename(f.path)],
       };
 
       final infoFile = File(path.join(destDir.path, "build_info.json"));
-      infoFile.writeAsStringSync(jsonEncode(buildInfo));
+      infoFile.writeAsStringSync(
+          const JsonEncoder.withIndent('  ').convert(buildInfo));
       Logger.success("Generated build_info.json");
-    } catch (e) {
-      Logger.error("Failed to generate build_info.json: $e");
+    } on FileSystemException catch (e) {
+      Logger.error("Failed to generate build_info.json: ${e.message}");
     }
 
-    if (count == 0) {
-      Logger.error("No artifacts found in build directories.");
+    if (stored.isEmpty) {
+      Logger.warning("No artifacts found in build directories.");
       Logger.info(
           "Check if your build command generated outputs in the standard locations.");
     } else {
-      Logger.success("Artifacts stored in $folderName ($count files)");
+      Logger.success(
+          "Artifacts stored in $folderName (${stored.length} files)");
     }
+    return stored;
+  }
+
+  List<File> _scan(String dirPath, String extension, DateTime? builtAfter) {
+    final dir = Directory(dirPath);
+    if (!dir.existsSync()) return const [];
+
+    // File timestamps can be truncated to whole (or even two) seconds.
+    final cutoff = builtAfter?.subtract(const Duration(seconds: 2));
+    final files = dir
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith(extension))
+        .where((f) => cutoff == null || !f.lastModifiedSync().isBefore(cutoff))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    return files;
   }
 
   Future<String> _getFlutterVersion() async {
     try {
-      final result = await Process.run('flutter', ['--version']);
+      final result = await Process.run('flutter', ['--version'],
+          runInShell: Platform.isWindows);
       if (result.exitCode == 0) {
         final firstLines = result.stdout.toString().split('\n');
         return firstLines.isNotEmpty ? firstLines.first.trim() : "unknown";
       }
-    } catch (_) {}
+    } on ProcessException {
+      // Flutter is not on PATH; the version is informational only.
+    }
     return "unknown";
   }
 }

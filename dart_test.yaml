@@ -1,0 +1,3 @@
+# Several services work relative to the process working directory, which is
+# shared by all test isolates, so test files must not run concurrently.
+concurrency: 1

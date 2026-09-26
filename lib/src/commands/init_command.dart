@@ -12,6 +12,8 @@ class InitCommand {
     }
 
     final content = '''
+# flutter_ci configuration. Run `flutter_ci yaml-guide` for every option.
+# Command-line flags override the values in this file.
 version_bump: true
 platform: both
 
